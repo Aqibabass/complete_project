@@ -66,7 +66,7 @@ function SinglePlacePage() {
 
                     <hr className="border border-gray-300 my-6" />
 
-                    <div className="">
+                    <div className="text-justify">
                         <h2 className="font-semibold text-2xl mb-4">Description</h2>
                         <h2 className={`${readMore ? "line-clamp-none" : "line-clamp-[10]"}`}>{singlePlace?.description}</h2>
                         <h1 onClick={toggleReadMore} className="text-primary flex mr-5 justify-end cursor-pointer">
@@ -97,7 +97,7 @@ function SinglePlacePage() {
                 </div>
 
                 <div className="relative">
-                    <div className="sticky md:top-46 lg:top-28 z-10">
+                    <div className="sticky px-2 md:top-46 lg:top-28 z-10">
                         <BookingCard singlePlace={singlePlace} />
                     </div>
                 </div>
@@ -106,7 +106,7 @@ function SinglePlacePage() {
             <div>
                 <h2 className="font-semibold text-2xl mt-4">Extra Info</h2>
             </div>
-            <div className="text-sm text-gray-800 mb-4 mt-2">
+            <div className=" text-justify text-sm text-gray-800 mb-4 mt-2">
                 {singlePlace?.extraInfo}
             </div>
 
