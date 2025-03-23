@@ -5,17 +5,15 @@ import AccountNav from "./AccountNav";
 import { Navigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { sanityClient } from "../../client";
 
 function PlacesForm() {
-
     const [loading, setLoading] = useState(false);
-
     const { id } = useParams();
 
+    
     const [title, setTitle] = useState("");
     const [address, setAddress] = useState("");
-    const [addedPhotos, setAddedPhotos] = useState([]);
+    const [addedPhotos, setAddedPhotos] = useState([]); // Array of Cloudinary URLs
     const [description, setDescription] = useState("");
     const [perks, setPerks] = useState([]);
     const [extraInfo, setExtraInfo] = useState("");
@@ -26,11 +24,6 @@ function PlacesForm() {
     const [redirect, setRedirect] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
 
-    const normalizePhotos = (photos) =>
-        photos.map((photo) => ({
-            _id: photo._id || null,
-            url: photo.url || (typeof photo === "string" ? photo : null),
-        }));
 
     useEffect(() => {
         if (!id) return;
@@ -40,10 +33,7 @@ function PlacesForm() {
 
             setTitle(data?.title);
             setAddress(data?.address);
-
-            const normalizedPhotos = normalizePhotos(data?.photos || []);
-            setAddedPhotos(normalizedPhotos);
-
+            setAddedPhotos(data?.photos || []); // Directly use Cloudinary URLs
             setDescription(data?.description);
             setPerks(data?.perks);
             setExtraInfo(data?.extraInfo);
@@ -54,50 +44,59 @@ function PlacesForm() {
         });
     }, [id]);
 
-
+    
     const savePlace = async (ev) => {
         ev.preventDefault();
 
-        if (!title || !address || !addedPhotos || !description || !perks || !extraInfo || !checkIn || !checkOut || !maxGuest || !price) {
-            toast.error("Please fill in every details");
+        if (!title || !address || !addedPhotos.length || !description || !perks.length || !extraInfo || !checkIn || !checkOut || !maxGuest || !price) {
+            toast.error("Please fill in every detail");
             return;
         }
 
-        // savePin();
-
         setLoading(true);
 
-        if (id) {
-            //update an existing place
-            await axios.put("/places", {
-                id, title, address, addedPhotos: addedPhotos.map(photo => photo.url || photo), description, perks, extraInfo, checkIn, checkOut, maxGuest, price
-            });
+        const placeData = {
+            title,
+            address,
+            addedPhotos, // Array of Cloudinary URLs
+            description,
+            perks,
+            extraInfo,
+            checkIn,
+            checkOut,
+            maxGuest,
+            price,
+            ...(id && { id }), // Include ID if updating
+        };
+
+        try {
+            const endpoint = id ? "/places" : "/places";
+            const method = id ? "put" : "post";
+
+            await axios[method](endpoint, placeData);
             setRedirect(true);
-            setLoading(false);
-        } else {
-            //create new place
-            await axios.post("/places", {
-                title, address, addedPhotos: addedPhotos.map(photo => photo.url || photo), description, perks, extraInfo, checkIn, checkOut, maxGuest, price
-            });
-            setRedirect(true);
+        } catch (error) {
+            toast.error("Error saving place");
+        } finally {
             setLoading(false);
         }
-    }
+    };
 
+    
     const deletePlace = async () => {
         try {
             await axios.delete("/places/" + id);
             setRedirect(true);
         } catch (error) {
-            alert("Error deleting the your accomodation. Please try again.");
+            toast.error("Error deleting your accommodation. Please try again.");
         }
     };
 
+  
     if (redirect) {
-        return <Navigate to={"/account/places"} />
+        return <Navigate to={"/account/places"} />;
     }
-
-
+    
     // const savePin = () => {
     //     if (loading) {
     //         alert("Please wait until the image is uploaded.");
@@ -140,26 +139,29 @@ function PlacesForm() {
 
 
 
-
     return (
-        <div className="">
+        <div>
+            
             <AccountNav />
+            
             <form onSubmit={savePlace}>
                 {/* --------------title-------------------- */}
                 <h2 className="text-2xl font-medium mt-4 pl-1">Title</h2>
-                <input type="text"
-                    placeholder="title of your place"
+                <input
+                    type="text"
+                    placeholder="Title of your place"
                     value={title}
-                    onChange={ev => setTitle(ev.target.value)}
+                    onChange={(ev) => setTitle(ev.target.value)}
                 />
 
 
                 {/* ------------------address-------------------- */}
                 <h2 className="text-2xl font-medium mt-4 pl-1">Address</h2>
-                <input type="text"
-                    placeholder="address of your place"
+                <input
+                    type="text"
+                    placeholder="Address of your place"
                     value={address}
-                    onChange={ev => setAddress(ev.target.value)}
+                    onChange={(ev) => setAddress(ev.target.value)}
                 />
 
 
@@ -172,7 +174,7 @@ function PlacesForm() {
                 <h2 className="text-2xl font-medium mt-4 pl-1">Description</h2>
                 <textarea
                     value={description}
-                    onChange={ev => setDescription(ev.target.value)}
+                    onChange={(ev) => setDescription(ev.target.value)}
                 />
 
 
@@ -188,7 +190,7 @@ function PlacesForm() {
                 <textarea
                     placeholder="About your place"
                     value={extraInfo}
-                    onChange={ev => setExtraInfo(ev.target.value)}
+                    onChange={(ev) => setExtraInfo(ev.target.value)}
                 />
 
 
@@ -196,40 +198,44 @@ function PlacesForm() {
                 <h2 className="text-2xl font-medium mt-4 pl-1">House Rules</h2>
                 <div className="grid gap-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
                     <div className="border px-4 pb-1 rounded-2xl">
-                        <h3 className="mt-2 mb-2">check-In</h3>
-                        <input className=" border border-gray-400 outline-none px-2 rounded-2xl"
+                        <h3 className="mt-2 mb-2">Check-In</h3>
+                        <input
+                            className="border border-gray-400 outline-none px-2 rounded-2xl"
                             type="time"
                             value={checkIn}
-                            onChange={ev => setECheckIn(ev.target.value)}
+                            onChange={(ev) => setECheckIn(ev.target.value)}
                         />
                     </div>
 
                     <div className="border pb-1 px-4 rounded-2xl">
-                        <h3 className="mt-2 mb-2">check-Out</h3>
-                        <input className=" border border-gray-400 outline-none px-2 rounded-2xl"
+                        <h3 className="mt-2 mb-2">Check-Out</h3>
+                        <input
+                            className="border border-gray-400 outline-none px-2 rounded-2xl"
                             type="time"
                             value={checkOut}
-                            onChange={ev => setECheckOut(ev.target.value)}
+                            onChange={(ev) => setECheckOut(ev.target.value)}
                         />
                     </div>
 
                     <div className="border px-4 pb-2 rounded-2xl">
-                        <h3 className="mt-2 mb-2">Maximum guests</h3>
-                        <input className=" border border-gray-400 outline-none px-2 rounded-2xl"
+                        <h3 className="mt-2 mb-2">Maximum Guests</h3>
+                        <input
+                            className="border border-gray-400 outline-none px-2 rounded-2xl"
                             type="number"
                             min={1}
                             value={maxGuest}
-                            onChange={ev => setMaxGuest(ev.target.value)}
+                            onChange={(ev) => setMaxGuest(ev.target.value)}
                         />
                     </div>
 
                     <div className="border px-4 pb-2 rounded-2xl">
                         <h3 className="mt-2 mb-2">Price Per Night ₹</h3>
-                        <input className=" border border-gray-400 outline-none px-2 rounded-2xl"
+                        <input
+                            className="border border-gray-400 outline-none px-2 rounded-2xl"
                             type="number"
                             min={100}
                             value={price}
-                            onChange={ev => setPrice(ev.target.value)}
+                            onChange={(ev) => setPrice(ev.target.value)}
                         />
                     </div>
                 </div>
@@ -254,32 +260,24 @@ function PlacesForm() {
                     ) : (
                         <button className="primary mt-8 mb-4 max-w-52">Save</button>
                     )}
-
                 </div>
             </form>
+
+         
             {confirmDelete && (
                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
                     <div className="bg-white p-6 rounded-md shadow-md">
                         <h2 className="text-lg font-bold mb-4">Confirm Deletion</h2>
                         <p>Are you sure you want to delete this place?</p>
                         <div className="flex justify-end mt-4">
-                            <button
-                                className="mr-4 px-4 py-2 bg-gray-300 rounded"
-                                onClick={() => setConfirmDelete(false)}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="px-4 py-2 bg-red-500 text-white rounded"
-                                onClick={deletePlace}
-                            >
-                                Delete
-                            </button>
+                            <button className="mr-4 px-4 py-2 bg-gray-300 rounded" onClick={() => setConfirmDelete(false)}>Cancel</button>
+                            <button className="px-4 py-2 bg-red-500 text-white rounded" onClick={deletePlace}>Delete</button>
                         </div>
                     </div>
                 </div>
             )}
         </div>
-    )
+    );
 }
-export default PlacesForm
+
+export default PlacesForm;

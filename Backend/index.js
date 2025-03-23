@@ -16,18 +16,27 @@ const jwt = require("jsonwebtoken");
 const jwtSecret = 'hjwdj$jhgjvgg54e6rgvjh68';
 const BASE_URL = require("./constants.js");
 
+// ----------------------------- Cloudinary setup ---------------------------
+const cloudinary = require("cloudinary").v2;
+const multer = require("multer");
+const { Readable } = require("stream");
+
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const port = process.env.PORT || 4000;
-
 const app = express();
+
 
 app.use(cors({
     credentials: true,
     // origin: 'http://localhost:5173',
     origin: BASE_URL,
 }));
-
-
 
 app.use(express.json());
 app.use(cookieParser());
@@ -139,20 +148,78 @@ app.post("/api/places", async (req, res) => {
     }
 });
 
+// ----------------------------- Cloudinary Upload via URL -----------------------------
+app.post("/upload-by-link", async (req, res) => {
+    const { link } = req.body;
+
+    if (!link || !link.startsWith("http")) {
+        return res.status(400).json({ error: "Valid image URL is required" });
+    }
+
+    try {
+        // Download image and convert to stream
+        const response = await axios.get(link, { responseType: "arraybuffer" });
+        const imageStream = new Readable();
+        imageStream.push(response.data);
+        imageStream.push(null);
+
+        // Upload to Cloudinary
+        const cloudinaryResponse = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { folder: "uploads", public_id: "photo" + Date.now() },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            imageStream.pipe(uploadStream);
+        });
+
+        res.json({ url: cloudinaryResponse.secure_url });
+    } catch (error) {
+        console.error("❌ Image upload failed:", error);
+        res.status(500).json({ error: "Failed to upload image" });
+    }
+});
+
+// ----------------------------- Cloudinary File Upload -----------------------------
+const upload = multer({ storage: multer.memoryStorage() });
+
+app.post("/upload", upload.array("photos", 100), async (req, res) => {
+    try {
+        const uploadedUrls = [];
+        for (const file of req.files) {
+            // Upload each file to Cloudinary
+            const result = await new Promise((resolve, reject) => {
+                cloudinary.uploader.upload_stream(
+                    { folder: "uploads", public_id: "photo" + Date.now(), resource_type: "auto" },
+                    (error, result) => {
+                        if (error) reject(error);
+                        else resolve(result);
+                    }
+                ).end(file.buffer);
+            });
+            uploadedUrls.push(result.secure_url);
+        }
+        res.json(uploadedUrls);
+    } catch (error) {
+        console.error("❌ File upload failed:", error);
+        res.status(500).json({ error: "Failed to upload files" });
+    }
+});
+
+
 app.get("/", (req, res) => {
     res.send("Server is running!");
 });
 
-
-
+// ----------------------------- Route Handlers ---------------------------
 app.use(authRoute);
 // app.use(uploadphoto);
 app.use(newplace);
 app.use(booking);
 app.use(comment);
 app.use(razorpay);
-
-
 
 app.listen(port, (req, res) => {
     console.log(`server running on port ${port}`)

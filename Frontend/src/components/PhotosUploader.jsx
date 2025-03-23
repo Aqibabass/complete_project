@@ -3,7 +3,6 @@ import { AiOutlineCloudUpload } from "react-icons/ai";
 import { FaTrashAlt } from "react-icons/fa";
 import { IoIosStar } from "react-icons/io";
 import axios from "axios";
-import { sanityClient } from "../../client";
 import ErrorMessage from "../components/ErrorMessage";
 
 function PhotosUploader({ addedPhotos, onChange }) {
@@ -14,78 +13,64 @@ function PhotosUploader({ addedPhotos, onChange }) {
     const handleCloseError = () => {
         setShowError(false);
         setPhotoLink("");
-    }
+    };
 
     const addPhotoByLink = async (ev) => {
         ev.preventDefault();
         if (!photoLink.trim()) return;
 
         try {
-            const newPhoto = { url: photoLink, _id: null };
-            console.log(newPhoto)
             setLoading(true);
-            onChange((prev) => [...prev, newPhoto]);
+            const { data } = await axios.post("/upload-by-link", { link: photoLink });
+            onChange((prev) => [...prev, data.url]); // Add the Cloudinary URL to the list
             setPhotoLink("");
-            setLoading(false);
         } catch (error) {
             console.error("Error adding photo by link:", error);
             setShowError(true);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const uploadImage = (e) => {
-        const selectedFiles = Array.from(e.target.files);
-        if (selectedFiles.length === 0) return;
-
-        const validFiles = selectedFiles.filter((file) =>
-            ["image/png", "image/jpeg", "image/webp", "image/gif"].includes(file.type)
-        );
-
-        if (validFiles.length === 0) {
-            setShowError(true);
-            return;
-        }
+    // ----------------------- Upload photo from device -----------------------
+    const uploadImage = async (e) => {
+        const files = e.target.files;
+        if (files.length === 0) return;
 
         setLoading(true);
-        Promise.all(
-            validFiles.map(async (file) => {
-                const timestamp = Date.now();
-                const fileName = `photo${timestamp}-${file.name}`;
+        try {
+            const data = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                data.append("photos", files[i]); // Append files to FormData
+            }
 
-                try {
-                    const document = await sanityClient.assets
-                        .upload("image", file, { contentType: file.type, filename: fileName });
-                    return ({
-                        url: document.url,
-                        _id: document._id,
-                        assetId: document.assetId,
-                    });
-                } catch (error) {
-                    console.error("Failed to upload image:", error);
-                    return null;
-                }
-            })
-        )
-            .then((uploadedPhotos) => {
-                const successfulPhotos = uploadedPhotos.filter((photo) => photo !== null);
-                onChange((prev) => [...prev, ...successfulPhotos]);
-            })
-            .finally(() => setLoading(false));
+            const { data: urls } = await axios.post("/upload", data, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            onChange((prev) => [...prev, ...urls]); // Add Cloudinary URLs to the list
+        } catch (error) {
+            console.error("Upload failed:", error);
+            setShowError(true);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDeletePic = (ev, photo) => {
+    // ----------------------- Delete a photo -----------------------
+    const handleDeletePic = (ev, photoUrl) => {
         ev.preventDefault();
-        onChange(addedPhotos.filter((p) => p.url !== photo.url));
+        onChange(addedPhotos.filter((url) => url !== photoUrl)); // Remove the URL from the list
     };
 
-    const frontPic = (ev, photo) => {
+    const frontPic = (ev, photoUrl) => {
         ev.preventDefault();
-        const updatedPhotos = [photo, ...addedPhotos.filter((p) => p.url !== photo.url)];
+        const updatedPhotos = [photoUrl, ...addedPhotos.filter((url) => url !== photoUrl)]; // Move the selected photo to the front
         onChange(updatedPhotos);
     };
 
     return (
         <>
+            
             <div className="flex gap-2">
                 <input
                     type="text"
@@ -96,31 +81,37 @@ function PhotosUploader({ addedPhotos, onChange }) {
                 <button
                     onClick={addPhotoByLink}
                     className="bg-blue-400 px-4 rounded-2xl hover:bg-primary"
+                    disabled={loading}
                 >
-                    Add&nbsp;picture
+                    {loading ? "Uploading..." : "Add\u00A0picture"}
                 </button>
             </div>
 
             <div className="grid gap-2 grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mt-3">
-                {addedPhotos.map((photo, index) => (
+                {addedPhotos.map((url, index) => (
                     <div key={index} className="h-32 flex relative">
+                       
                         <img
                             className="rounded-2xl w-full object-cover"
-                            src={photo.url}
+                            src={url}
                             alt={`Photo ${index + 1}`}
-                            onError={(e) => { e.target.src = "/hotel.png"; }}
+                            onError={(e) => {
+                                e.target.src = "/hotel.png";
+                            }}
                         />
+                        
                         <button
-                            onClick={(ev) => handleDeletePic(ev, photo)}
+                            onClick={(ev) => handleDeletePic(ev, url)}
                             className="cursor-pointer absolute bottom-1 right-2 p-1 text-white hover:text-red-600 rounded-full bg-black bg-opacity-50"
                         >
                             <FaTrashAlt />
                         </button>
+                        
                         <button
-                            onClick={(ev) => frontPic(ev, photo)}
+                            onClick={(ev) => frontPic(ev, url)}
                             className="cursor-pointer absolute bottom-1 left-2 p-1 text-white hover:text-primary rounded-full bg-black bg-opacity-50"
                         >
-                            {photo === addedPhotos[0] ? (
+                            {url === addedPhotos[0] ? (
                                 <IoIosStar className="text-primary" />
                             ) : (
                                 <IoIosStar />
@@ -129,19 +120,28 @@ function PhotosUploader({ addedPhotos, onChange }) {
                     </div>
                 ))}
 
+                
                 {showError && (
                     <ErrorMessage
                         message="Error uploading the photo. Please try again."
                         onClose={handleCloseError}
                     />
                 )}
+
+                
                 {loading ? (
                     <label className="h-32 cursor-pointer flex flex-col items-center justify-center border bg-transparent rounded-2xl p-2 text-lg text-gray-900">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
                     </label>
                 ) : (
                     <label className="h-32 cursor-pointer flex flex-col items-center justify-center border bg-transparent rounded-2xl p-2 text-lg text-gray-900">
-                        <input type="file" multiple className="hidden" onChange={uploadImage} />
+                        <input
+                            type="file"
+                            multiple
+                            className="hidden"
+                            onChange={uploadImage}
+                            accept="image/*" 
+                        />
                         <AiOutlineCloudUpload className="w-8 h-8" />
                         <h2 className="text-center">Upload from device</h2>
                     </label>
