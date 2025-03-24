@@ -44,24 +44,18 @@ function Comments() {
 
     const handlePostComment = async () => {
         if (!newComment.trim()) {
-            toast.error("review cannot be empty.");
+            toast.error("Review cannot be empty.");
             return;
         }
-
+    
         if (user || luser) {
             try {
-                const response = await axios.post("/postComment", {
-                    newComment,
-                    id,
-                });
-
-                const addedComment = {
-                    _id: response.data.commentId,
-                    comment: newComment,
-                    owner: { name: user?.name || luser?.name || "Anonymous" },
-                };
-
-                setComments((prevComments) => [...prevComments, addedComment]);
+                await axios.post("/postComment", { newComment, id });
+    
+                // Re-fetching cmments to ensure the new comment is fully stored
+                const response = await axios.get(`/placeComments/${id}`);
+                setComments(response.data.comments);
+    
                 setNewComment("");
                 toast.success("Review posted successfully!");
             } catch (error) {

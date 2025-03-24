@@ -110,9 +110,9 @@ function SinglePlacePage() {
                 {singlePlace?.extraInfo}
             </div>
 
-            {/* <div>
+             <div>
                 <Comments />
-            </div> */}
+            </div> 
 
         </div >
     )
