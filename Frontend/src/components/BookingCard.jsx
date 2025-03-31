@@ -19,6 +19,8 @@ function BookingCard({ singlePlace }) {
     const [phoneNo, setPhoneNo] = useState("");
     const [redirect, setRedirect] = useState("");
     const [loading, setLoading] = useState(false);
+    const [wantSMS, setWantSMS] = useState(false);
+    const [wantEmail, setWantEmail] = useState(false);
 
     const { user, luser } = useContext(UserContext);
 
@@ -70,6 +72,8 @@ function BookingCard({ singlePlace }) {
                                 place: singlePlace._id,
                                 placeName: singlePlace?.title,
                                 totalAmount,
+                                wantSMS,
+                                wantEmail
                             },
                         });
 
@@ -203,6 +207,24 @@ function BookingCard({ singlePlace }) {
                                 placeholder="9797xxxxxx"
                                 onChange={ev => setPhoneNo(ev.target.value)}
                             />
+                            <div className="mt-4 flex-row gap-4">
+                                <label className="flex items-center gap-2">
+                                    <input 
+                                        type="checkbox"
+                                        checked={wantSMS}
+                                        onChange={ev => setWantSMS(ev.target.checked)}
+                                    />
+                                    Receive booking confirmation via SMS
+                                </label>
+                                <label className="flex items-center gap-2">
+                                    <input 
+                                        type="checkbox"
+                                        checked={wantEmail}
+                                        onChange={ev => setWantEmail(ev.target.checked)}
+                                    />
+                                    Receive booking confirmation via Email
+                                </label>
+                            </div>
                         </div>
                         <div className="py-3 px-4 flex flex-col gap-2">
                             <div className="flex items-center justify-between">

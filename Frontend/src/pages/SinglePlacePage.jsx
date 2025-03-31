@@ -7,6 +7,7 @@ import BookingCard from "../components/BookingCard";
 import PhotoGallery from "../components/PhotoGallery";
 import LoadingScreen from "../components/LoadingScreen";
 import Comments from "../components/Comments";
+import StaticMap from "../components/StaticMap";
 
 function SinglePlacePage() {
 
@@ -109,7 +110,16 @@ function SinglePlacePage() {
             <div className=" text-justify text-sm text-gray-800 mb-4 mt-2">
                 {singlePlace?.extraInfo}
             </div>
-
+            <div className="text-xl font-semibold bg-white -mx-8 px-8 py-8 border-t">
+        <h2 className="mb-2 font-semibold text-2xl">Location</h2>
+        <p className="text-justify text-gray-700">
+          {singlePlace.locationDescription}
+        </p>
+            <div className="text-gray-500 text-sm mt-2">
+                Exact location provided after booking.
+                <StaticMap address={singlePlace?.address} />
+            </div>
+            </div>
              <div>
                 <Comments />
             </div> 

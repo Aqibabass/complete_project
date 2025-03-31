@@ -80,7 +80,7 @@ function Comments() {
     }
 
     return (
-        <div className="p-6 bg-white shadow-lg rounded-2xl">
+        <div className="p-6 bg-white shadow-lg rounded-2xl border">
             <h2 className="text-3xl font-medium mb-6 text-gray-800">⭐Reviews</h2>
 
             <div className="mb-6">

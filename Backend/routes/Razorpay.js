@@ -6,6 +6,7 @@ const jwtSecret = 'hjwdj$jhgjvgg54e6rgvjh68';
 const crypto = require("crypto");
 const router = express.Router();
 const sendMail = require("../mailer.js");
+const { sendSMS } = require("../sms.js");
 
 const razorpay = new Razorpay({
     key_id: "rzp_test_mWaBYCWHNbBLUr",
@@ -60,8 +61,9 @@ router.post("/verify-payment", async (req, res) => {
                     placeName: bookingDetails.placeName
                 });
 
-                const emailSubject = "Booking Confirmation";
-                const emailMessage = `
+                if (bookingDetails.wantEmail) {
+                    const emailSubject = "Booking Confirmation";
+                    const emailMessage = `
                 <p>Dear <strong>${bookingDetails.name}</strong>,</p>
     
                 <p>We’re delighted to confirm your booking at <strong>${bookingDetails.placeName}</strong>. Get ready for a relaxing and unforgettable experience with us.</p>
@@ -84,7 +86,13 @@ router.post("/verify-payment", async (req, res) => {
                 📞 <a href="tel:+9797788252">9797788252</a></p>
             `;
 
-                await sendMail(userData.email, emailSubject, emailMessage);
+                    await sendMail(userData.email, emailSubject, emailMessage);
+                }
+
+                if (bookingDetails.wantSMS) {
+                    const smsMessage = `Booking confirmed for ${bookingDetails.placeName}. Check-in: ${bookingDetails.checkIn}, Check-out: ${bookingDetails.checkOut}. Amount: Rs.${bookingDetails.totalAmount}. -TRAVELLER`;
+                    await sendSMS(bookingDetails.phoneNo, smsMessage);
+                }
 
                 res.json({ success: true, booking });
             });

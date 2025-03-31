@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Booking = require("../models/Booking.js")
+const { sendSMS } = require("../sms.js");
 const jwt = require("jsonwebtoken");
 const jwtSecret = 'hjwdj$jhgjvgg54e6rgvjh68';
 const Stripe = require('stripe');
@@ -11,7 +12,7 @@ const crypto = require('crypto');
 
 
 // -----------------------------Booking a new place----------------------
-// ---------------------------------------not used for now---------------------
+
 
 router.post('/bookings', async (req, res) => {
     const { sessionId } = req.body;
@@ -32,7 +33,7 @@ router.post('/bookings', async (req, res) => {
             }
 
             const { place, checkIn, checkOut, noOfGuests, name, phoneNo, totalAmount } = metadata;
-            await Booking.create({
+            const booking = await Booking.create({
                 owner: userData.id,
                 place,
                 checkIn,
@@ -42,6 +43,10 @@ router.post('/bookings', async (req, res) => {
                 phoneNo,
                 price: totalAmount,
             });
+
+            // Send SMS confirmation
+            const message = `Booking Confirmed! Dear ${name}, your booking for ${checkIn} to ${checkOut} has been confirmed. Total amount: Rs. ${totalAmount}. Thank you for booking with us!`;
+            await sendSMS(phoneNo, message);
 
             res.json({ message: 'Booking saved successfully!' });
         });

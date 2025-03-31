@@ -7,6 +7,7 @@ import PhotoGallery from "../components/PhotoGallery";
 import { differenceInCalendarDays, format } from "date-fns";
 import { SlCalender } from "react-icons/sl";
 import LoadingScreen from "../components/LoadingScreen";
+import StaticMap from "../components/StaticMap";
 
 function SingleBookingPage() {
 
@@ -110,7 +111,12 @@ function SingleBookingPage() {
             </div>
 
             <PhotoGallery singlePlace={booking?.place} />
-        </div >
+            <h2 className="font-semibold text-2xl mt-6">Where you'll be</h2>
+            <StaticMap address={booking?.place?.address} />
+            <div className="text-justify text-sm text-gray-800 mb-4 mt-2">
+               
+            </div>
+        </div>
     )
 }
 export default SingleBookingPage
